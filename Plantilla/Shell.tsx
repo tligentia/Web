@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Sparkles, HelpCircle, AlertCircle, CheckCircle2, Key, ArrowRight, Loader2 } from 'lucide-react';
+import { Sparkles, HelpCircle, AlertCircle, CheckCircle2, Key, ArrowRight, Loader2, Home } from 'lucide-react';
 import { COLORS, validateKey, listAvailableModels, fetchVaultKey } from './Parameters';
 import { Footer } from './Footer';
 import { Cookies } from './Cookies';
@@ -12,9 +12,10 @@ interface ShellProps {
   apiKey: string;
   onApiKeySave: (key: string) => void;
   onNavigate: (view: any, section?: string) => void;
+  view: string;
 }
 
-export const Shell: React.FC<ShellProps> = ({ children, apiKey, onApiKeySave, onNavigate }) => {
+export const Shell: React.FC<ShellProps> = ({ children, apiKey, onApiKeySave, onNavigate, view }) => {
   const [showAjustes, setShowAjustes] = useState(false);
   const [showCookies, setShowCookies] = useState(false);
   const [showManual, setShowManual] = useState(false);
@@ -100,8 +101,18 @@ export const Shell: React.FC<ShellProps> = ({ children, apiKey, onApiKeySave, on
         </div>
 
         <div className="flex items-center gap-3">
+          {view !== 'home' && (
+            <button
+              onClick={() => onNavigate('home')}
+              className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-white text-gray-900 border border-gray-100 hover:border-gray-900 transition-all duration-300 font-bold focus:outline-none group shadow-sm active:scale-95"
+            >
+              <div className="relative flex items-center justify-center">
+                  <Home size={16} className="text-gray-400 group-hover:text-gray-900 transition-colors" />
+              </div>
+              <span className="text-[10px] uppercase tracking-widest hidden sm:inline">Inicio</span>
+            </button>
+          )}
           <NavMenu onNavigate={onNavigate} />
-          {/* El menu APP ha sido ocultado por solicitud */}
         </div>
       </header>
 

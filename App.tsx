@@ -99,7 +99,7 @@ export default function App() {
 
   return (
     <div className="animate-in fade-in duration-700">
-      <Shell apiKey={apiKey} onApiKeySave={saveApiKey} onNavigate={handleNavigate}>
+      <Shell apiKey={apiKey} onApiKeySave={saveApiKey} onNavigate={handleNavigate} view={view}>
         {view === 'home' && (
           <HomePage 
             setView={setView} 
@@ -107,9 +107,9 @@ export default function App() {
             clearPrefill={() => setContactPrefill('')} 
           />
         )}
-        {view === 'bootcamp' && <BootcampPage onContactRequest={handleContactNavigation} setView={setView} />}
-        {view === 'talleres' && <TalleresPage onContactRequest={handleContactNavigation} setView={setView} />}
-        {view === 'minicamp' && <MiniCampPage onContactRequest={handleContactNavigation} setView={setView} />}
+        {view === 'bootcamp' && <BootcampPage setView={setView} onContactRequest={handleContactNavigation} />}
+        {view === 'talleres' && <TalleresPage setView={setView} onContactRequest={handleContactNavigation} />}
+        {view === 'minicamp' && <MiniCampPage setView={setView} onContactRequest={handleContactNavigation} />}
       </Shell>
     </div>
   );
@@ -693,11 +693,6 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0 space-y-20">
-      {/* BOTÓN VOLVER */}
-      <button onClick={() => setView('home')} className="flex items-center gap-3 text-gray-400 hover:text-red-700 font-black text-[10px] uppercase tracking-[0.3em] mb-10 group">
-        <ArrowLeft size={16} /> Volver al inicio
-      </button>
-
       {/* HEADER ALINEADO A LA IZQUIERDA */}
       <section className="text-left space-y-6">
         <div className="flex items-center gap-4 text-red-700">
@@ -936,17 +931,6 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
 function BootcampPage({ setView, onContactRequest }: { setView: (v: View) => void, onContactRequest: (m: string) => void }) {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0">
-      {/* BOTÓN VOLVER */}
-      <button 
-        onClick={() => setView('home')}
-        className="flex items-center gap-3 text-gray-400 hover:text-red-700 font-black text-[10px] uppercase tracking-[0.3em] mb-10 transition-colors group"
-      >
-        <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center group-hover:bg-red-50 group-hover:border-red-100 transition-all">
-          <ArrowLeft size={16} />
-        </div>
-        Volver al inicio
-      </button>
-
       {/* HEADER PROGRAMA */}
       <header className="mb-20 space-y-6">
         <div className="flex items-center gap-4 text-red-700">
@@ -1089,17 +1073,6 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0 space-y-20 font-sans">
-      {/* BOTÓN VOLVER */}
-      <button 
-        onClick={() => setView('home')}
-        className="flex items-center gap-3 text-gray-400 hover:text-red-700 font-black text-[10px] uppercase tracking-[0.3em] transition-colors group"
-      >
-        <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center group-hover:bg-red-50 group-hover:border-red-100 transition-all">
-          <ArrowLeft size={16} />
-        </div>
-        Volver al inicio
-      </button>
-
       {/* HEADER ALINEADO A LA IZQUIERDA */}
       <header className="text-left space-y-6">
         <div className="flex items-center gap-4 text-red-700">
