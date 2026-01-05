@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   ArrowRight, 
@@ -39,7 +40,12 @@ import {
   MapPin,
   Activity,
   Info,
-  Tags
+  Tags,
+  Server,
+  FileCheck,
+  ShieldAlert,
+  RefreshCcw,
+  Loader2
 } from 'lucide-react';
 import { 
   Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer,
@@ -51,7 +57,7 @@ import {
 import { Shell } from './Plantilla/Shell';
 import { crypto } from './Plantilla/Parameters';
 
-type View = 'home' | 'bootcamp' | 'talleres' | 'minicamp';
+type View = 'home' | 'bootcamp' | 'talleres' | 'minicamp' | 'servicios_detalle' | 'guia';
 
 export default function App() {
   const [view, setView] = useState<View>('home');
@@ -110,6 +116,8 @@ export default function App() {
         {view === 'bootcamp' && <BootcampPage setView={setView} onContactRequest={handleContactNavigation} />}
         {view === 'talleres' && <TalleresPage setView={setView} onContactRequest={handleContactNavigation} />}
         {view === 'minicamp' && <MiniCampPage setView={setView} onContactRequest={handleContactNavigation} />}
+        {view === 'servicios_detalle' && <ServiciosDetallePage onContactRequest={handleContactNavigation} />}
+        {view === 'guia' && <GuiaPage />}
       </Shell>
     </div>
   );
@@ -117,9 +125,63 @@ export default function App() {
 
 const highlightIA = (text: string) => {
   return text.split(/(IA)/).map((part, i) => 
-    part === 'IA' ? <span key={i} className="text-red-700">IA</span> : part
+    part === 'IA' ? <span key={i} className="text-red-700 transition-colors duration-300 group-hover:text-inherit">IA</span> : part
   );
 };
+
+// --- COMPONENTE PÁGINA GUIA CON RECORTE SEGURO ---
+function GuiaPage() {
+  const [loading, setLoading] = useState(true);
+
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full h-[88vh] flex flex-col space-y-4">
+      <div className="flex items-center justify-between px-2">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-red-700 rounded-lg text-white">
+            <Search size={20} />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-gray-900 uppercase tracking-tighter leading-tight">GuIA de Tligent</h2>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Explorador de recursos de Inteligencia Artificial</p>
+          </div>
+        </div>
+        <a 
+          href="https://guia.tligent.com" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="p-2 bg-gray-50 border border-gray-100 rounded-xl text-gray-400 hover:text-red-700 transition-all flex items-center gap-2 group"
+        >
+          <span className="text-[9px] font-black uppercase tracking-widest group-hover:underline">Abrir original</span>
+          <ExternalLink size={14} />
+        </a>
+      </div>
+
+      {/* Contenedor con Recorte: Ocultamos Header y Footer del iframe */}
+      <div className="flex-1 w-full bg-white border border-gray-100 rounded-[2.5rem] shadow-sm overflow-hidden relative">
+        {loading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-20 gap-4">
+            <Loader2 size={32} className="text-red-700 animate-spin" />
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest animate-pulse">Filtrando contenido...</p>
+          </div>
+        )}
+        
+        {/* Recorte: Desplazamos el iframe hacia arriba y le damos más altura para sacar el footer del área visible */}
+        <div className="w-full h-full relative" style={{ marginTop: '-80px', height: 'calc(100% + 220px)' }}>
+          <iframe 
+            src="https://guia.tligent.com" 
+            className="w-full h-full border-0"
+            onLoad={() => setLoading(false)}
+            title="GuIA de Tligent Content"
+          />
+        </div>
+        
+        {/* Máscaras para asegurar que el recorte se vea limpio */}
+        <div className="absolute inset-x-0 top-0 h-4 bg-white z-10"></div>
+        <div className="absolute inset-x-0 bottom-0 h-4 bg-white z-10"></div>
+      </div>
+    </div>
+  );
+}
 
 // --- COMPONENTE PÁGINA PRINCIPAL ---
 function HomePage({ 
@@ -135,11 +197,9 @@ function HomePage({
   const [mensaje, setMensaje] = useState('');
   const nombreInputRef = useRef<HTMLInputElement>(null);
 
-  // Sincronizar el mensaje de pre-relleno cuando cambie y dar foco al nombre
   useEffect(() => {
     if (prefillMessage) {
       setMensaje(prefillMessage);
-      // Timeout para asegurar que la navegación y el scroll se han iniciado
       const timer = setTimeout(() => {
         nombreInputRef.current?.focus();
       }, 600);
@@ -208,23 +268,29 @@ function HomePage({
               <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-4">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Áreas Clave</p>
                 <div className="flex flex-wrap gap-2">
-                  <span className="bg-white border border-gray-200 px-4 py-2 rounded-xl text-xs font-bold text-gray-900 shadow-sm">{highlightIA("IA")} Aplicada</span>
-                  <span className="bg-white border border-gray-200 px-4 py-2 rounded-xl text-xs font-bold text-gray-900 shadow-sm">Tecnología & Desarrollo</span>
-                  <span className="bg-white border border-gray-200 px-4 py-2 rounded-xl text-xs font-bold text-gray-900 shadow-sm">Ciberseguridad</span>
-                  <span className="bg-white border border-gray-200 px-4 py-2 rounded-xl text-xs font-bold text-gray-900 shadow-sm">LegalTech & Compliance</span>
+                  {["IA Aplicada", "Tecnología & Desarrollo", "Ciberseguridad", "LegalTech & Compliance"].map((item, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => setView('servicios_detalle')}
+                      className="bg-white border border-gray-200 px-4 py-2 rounded-xl text-xs font-bold text-gray-900 shadow-sm hover:bg-red-700 hover:text-white hover:border-red-700 transition-all active:scale-95"
+                    >
+                      {highlightIA(item)}
+                    </button>
+                  ))}
                 </div>
               </div>
 
+              {/* CARD SERVICIOS PRO CORREGIDA PARA LECTURA EN HOVER */}
               <div 
-                onClick={() => setView('bootcamp')}
-                className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-lg flex items-center gap-6 group hover:border-red-100 transition-all cursor-pointer hover:shadow-xl active:scale-95"
+                onClick={() => setView('servicios_detalle')}
+                className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-lg flex items-center gap-6 group hover:bg-red-700 hover:border-red-700 transition-all duration-300 cursor-pointer hover:shadow-xl active:scale-95"
               >
-                <div className="w-16 h-16 bg-red-50 text-red-700 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:bg-red-700 group-hover:text-white transition-all">
-                  <BookOpen size={32} />
+                <div className="w-16 h-16 bg-red-50 text-red-700 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:bg-white/20 group-hover:text-white transition-all duration-300">
+                  <Briefcase size={32} />
                 </div>
-                <div>
-                  <h4 className="font-black text-sm uppercase mb-1 tracking-tight">BootCamp {highlightIA("IA")}</h4>
-                  <p className="text-base text-gray-500 leading-relaxed font-medium">Programas de alta intensidad con enfoque 100% práctico para dominar la {highlightIA("IA")}.</p>
+                <div className="flex-1">
+                  <h4 className="font-black text-sm uppercase mb-1 tracking-tight group-hover:text-white transition-colors duration-300">Servicios <span className="text-red-700 group-hover:text-inherit">PRO</span></h4>
+                  <p className="text-base text-gray-500 leading-relaxed font-medium group-hover:text-white/90 transition-colors duration-300 text-balance">Consultoría estratégica e implantación táctica de {highlightIA("IA")}.</p>
                 </div>
               </div>
             </div>
@@ -245,32 +311,32 @@ function HomePage({
               title: "IA aplicada al negocio",
               desc: "Estrategia y despliegue de IA (cloud y local) con foco en productividad.",
               items: ["BootCamps IA", "Consultoría estratégica", "Modelos On-Premise"],
-              icon: <CheckCircle2 className="text-red-700" size={24} />
+              icon: <CheckCircle2 size={24} />
             },
             {
               title: "Tecnología y Desarrollo",
               desc: "Diseño y gestión de aplicaciones, integraciones y plataformas orientadas a negocio.",
               items: ["Apps a medida", "Automatización", "Analítica de datos"],
-              icon: <Cpu className="text-red-700" size={24} />
+              icon: <Cpu size={24} />
             },
             {
               title: "Ciberseguridad y Peritaje",
               desc: "Protección y evidencias digitales con enfoque pericial y validez legal.",
               items: ["Auditoría técnica", "Políticas de seguridad", "Peritaje informático"],
-              icon: <ShieldCheck className="text-red-700" size={24} />
+              icon: <ShieldCheck size={24} />
             },
             {
               title: "LegalTech & Compliance",
               desc: "Gobernanza y adecuación normativa para soluciones de IA y datos sensibles.",
               items: ["Cumplimiento AI-Act", "Privacidad por diseño", "Gobernanza del Dato"],
-              icon: <Scale className="text-red-700" size={24} />
+              icon: <Scale size={24} />
             }
           ].map((s, i) => (
             <article key={i} className="bg-white border border-gray-100 p-6 rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all group border-b-4 border-b-transparent hover:border-b-red-700">
-              <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mb-6 group-hover:bg-red-700 group-hover:text-white transition-colors">
+              <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mb-6 text-red-700 group-hover:bg-red-700 group-hover:text-white transition-all shadow-sm">
                 {s.icon}
               </div>
-              <h3 className="text-lg font-black text-gray-900 mb-4 uppercase tracking-tighter leading-tight">{highlightIA(s.title)}</h3>
+              <h3 className="text-lg font-black text-gray-900 mb-4 uppercase tracking-tighter leading-tight group-hover:text-red-700 transition-colors">{highlightIA(s.title)}</h3>
               <p className="text-base text-gray-500 mb-6 font-medium leading-relaxed">{highlightIA(s.desc)}</p>
               <ul className="space-y-3">
                 {s.items.map((item, j) => (
@@ -291,14 +357,12 @@ function HomePage({
             <h2 className="text-3xl font-black text-gray-900 tracking-tighter uppercase mb-2">Programas {highlightIA("IA")}</h2>
             <p className="text-base text-gray-500 max-w-2xl font-medium">Desde formación intensiva hasta despliegues on-premise de alta privacidad.</p>
           </div>
-          <a 
-            href="https://guia.tligent.com/" 
-            target="_blank" 
-            rel="noopener noreferrer"
+          <button 
+            onClick={() => setView('guia')}
             className="inline-flex items-center gap-3 bg-white border-2 border-red-700 text-red-700 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-700 hover:text-white transition-all shadow-sm active:scale-95 group"
           >
-            Explorar GuIA <ExternalLink size={16} className="group-hover:rotate-12 transition-transform" />
-          </a>
+            Explorar GuIA <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          </button>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -307,64 +371,64 @@ function HomePage({
               title: "BootCamp IA",
               tag: "Formación intensiva",
               desc: "Domina herramientas de IA generativa con enfoque ético y legal en sesiones prácticas.",
-              icon: <BookOpen className="text-red-700" />,
+              icon: <BookOpen />,
               action: () => setView('bootcamp')
             },
             {
               title: "Talleres IA",
               tag: "Intensivos 1 jornada",
               desc: "Cápsulas formativas de alto impacto para resolver necesidades concretas en un solo día.",
-              icon: <Zap className="text-red-700" />,
+              icon: <Zap />,
               action: () => setView('talleres')
             },
             {
               title: "MiniCamp IA",
               tag: "Sesiones divulgativas",
               desc: "Encuentros para entender el impacto de la IA y democratizar el conocimiento tecnológico.",
-              icon: <Presentation className="text-red-700" />,
+              icon: <Presentation />,
               action: () => setView('minicamp')
             },
             {
               title: "Consultoría de Implantación",
               tag: "Hoja de ruta",
               desc: "Te guiamos en el proceso de integrar soluciones de IA en tu negocio. Desde la estrategia inicial hasta la implementación y optimización, asegurando un retorno de inversión claro y medible.",
-              icon: <Target className="text-red-700" />,
-              action: () => document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' })
+              icon: <Target />,
+              action: () => setView('servicios_detalle')
             },
             {
               title: "IA en Local (On-Premise)",
               tag: "Privacidad Total",
               desc: "Implementa modelos de IA directamente en tu infraestructura. Maximiza la seguridad, privacidad y control de tus datos sensibles, garantizando un rendimiento óptimo sin depender de servicios en la nube.",
-              icon: <Database className="text-red-700" />,
-              action: () => document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' })
+              icon: <Database />,
+              action: () => setView('servicios_detalle')
             },
             {
               title: "Cumplimiento Legal en IA",
               tag: "Cumplimiento Normativo",
               desc: "Navega con seguridad el complejo panorama normativo. Asesoramiento experto para garantizar el cumplimiento con AI-Act, estándares ISO y normativas sectoriales.",
-              icon: <Scale className="text-red-700" />,
-              action: () => document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' })
+              icon: <Scale />,
+              action: () => setView('servicios_detalle')
             }
           ].map((p, i) => (
             <div 
               key={i} 
               onClick={p.action}
-              className="flex gap-6 p-8 bg-gray-50/50 rounded-[2.5rem] border border-gray-100 hover:bg-white hover:shadow-xl transition-all group cursor-pointer active:scale-95"
+              className="flex gap-6 p-8 bg-gray-50/50 rounded-[2.5rem] border border-gray-100 hover:bg-red-700 hover:shadow-xl transition-all group cursor-pointer active:scale-95 border-b-4 border-b-transparent"
             >
-              <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm group-hover:bg-red-700 group-hover:text-white transition-all">
+              <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm text-red-700 group-hover:bg-white group-hover:text-red-700 transition-all">
                 {React.cloneElement(p.icon as React.ReactElement<{ size?: number }>, { size: 28 })}
               </div>
-              <div>
-                <span className="text-[10px] font-black text-red-700 uppercase tracking-widest mb-1 block">{p.tag}</span>
-                <h4 className="text-xl font-black text-gray-900 uppercase tracking-tighter mb-2 leading-tight">{highlightIA(p.title)}</h4>
-                <p className="text-base text-gray-500 font-medium leading-relaxed">{highlightIA(p.desc)}</p>
+              <div className="flex-1">
+                <span className="text-[10px] font-black text-red-700 uppercase tracking-widest mb-1 block group-hover:text-white transition-colors">{p.tag}</span>
+                <h4 className="text-xl font-black text-gray-900 uppercase tracking-tighter mb-2 leading-tight group-hover:text-white transition-colors">{highlightIA(p.title)}</h4>
+                <p className="text-base text-gray-500 font-medium leading-relaxed group-hover:text-white/80 transition-colors">{highlightIA(p.desc)}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* VITAG SECTION REDISEÑADA CON LA NUEVA INFO ESTRUCTURADA */}
+      {/* VITAG SECTION REDISEÑADA */}
       <section id="vitag" className="w-full bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 text-gray-900 overflow-hidden relative shadow-sm">
         <div className="absolute top-0 right-0 p-12 text-gray-50 -z-0">
           <Video size={200} />
@@ -410,22 +474,22 @@ function HomePage({
             </div>
           </div>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {[
-                { label: "Videoteca", icon: <Database size={32} /> },
-                { label: "Catalogación", icon: <Tags size={32} /> },
-                { label: "Análisis", icon: <Activity size={32} /> },
-                { label: "Colaboración", icon: <Users size={32} /> }
+                { label: "Videoteca", icon: <Database size={24} /> },
+                { label: "Catalogación", icon: <Tags size={24} /> },
+                { label: "Análisis", icon: <Activity size={24} /> },
+                { label: "Colaboración", icon: <Users size={24} /> }
               ].map((item, i) => (
                 <button 
                   key={i} 
                   onClick={() => jumpToContact(item.label)}
-                  className="aspect-square bg-gray-50 rounded-3xl border border-gray-100 flex flex-col items-center justify-center text-center p-4 space-y-3 hover:border-red-200 transition-colors shadow-inner group active:scale-95"
+                  className="aspect-square bg-gray-50 rounded-2xl border border-gray-100 flex flex-col items-center justify-center text-center p-3 space-y-2 hover:bg-red-700 hover:border-red-700 transition-all shadow-inner group active:scale-95"
                 >
-                    <div className="text-red-700 group-hover:scale-110 transition-transform">
+                    <div className="text-red-700 group-hover:text-white group-hover:scale-110 transition-all">
                       {item.icon}
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">{item.label}</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 group-hover:text-white/60 transition-colors">{item.label}</p>
                 </button>
               ))}
             </div>
@@ -433,18 +497,18 @@ function HomePage({
               href="https://vitag.es/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="w-full bg-red-700 text-white p-8 rounded-[2.5rem] flex items-center justify-between group hover:bg-gray-900 transition-all shadow-xl shadow-red-50/50 active:scale-[0.98]"
+              className="w-full bg-red-700 text-white p-5 rounded-2xl flex items-center justify-between group hover:bg-gray-900 transition-all shadow-xl shadow-red-50/50 active:scale-[0.98]"
             >
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-white/20 transition-all">
-                  <Globe size={24} />
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-white/20 transition-all">
+                  <Globe size={20} />
                 </div>
                 <div>
-                  <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-0.5">Comienza ahora</p>
-                  <p className="text-base font-black uppercase tracking-tighter">DATE DE ALTA GRATIS</p>
+                  <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em] mb-0.5 leading-none">Comienza ahora</p>
+                  <p className="text-sm font-black uppercase tracking-tighter leading-none">DATE DE ALTA GRATIS</p>
                 </div>
               </div>
-              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </a>
           </div>
         </div>
@@ -480,12 +544,12 @@ function HomePage({
               icon: <Globe size={28} />
             }
           ].map((s, i) => (
-            <div key={i} className="bg-gray-50/50 border border-gray-100 p-8 rounded-[2.5rem] hover:bg-white hover:shadow-xl transition-all group border-b-4 border-b-transparent hover:border-b-red-700">
-              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mb-6 text-red-700 group-hover:bg-red-700 group-hover:text-white transition-all shadow-sm">
+            <div key={i} className="bg-gray-50/50 border border-gray-100 p-8 rounded-[2.5rem] hover:bg-red-700 hover:shadow-xl transition-all group border-b-4 border-b-transparent">
+              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mb-6 text-red-700 group-hover:bg-white group-hover:text-red-700 transition-all shadow-sm">
                 {s.icon}
               </div>
-              <h3 className="text-xl font-black text-gray-900 mb-4 uppercase tracking-tighter leading-tight">{s.title}</h3>
-              <p className="text-base text-gray-500 font-medium leading-relaxed">{highlightIA(s.desc)}</p>
+              <h3 className="text-xl font-black text-gray-900 mb-4 uppercase tracking-tighter leading-tight group-hover:text-white transition-colors">{s.title}</h3>
+              <p className="text-base text-gray-500 font-medium leading-relaxed group-hover:text-white/80 transition-colors">{highlightIA(s.desc)}</p>
             </div>
           ))}
         </div>
@@ -521,7 +585,7 @@ function HomePage({
             </div>
             <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Cómo trabajamos</h3>
             <p className="text-base text-gray-500 font-medium leading-relaxed">
-              Partimos de una fase de diagnóstico, definimos objetivos realistas y construimos un plan de acción, priorizando quick wins y una adopción gradual de la tecnología.
+              Partimos de una fase de diagnóstico, definimos objetivos realistas y construimos un plan de action, priorizando quick wins y una adopción gradual de la tecnología.
             </p>
           </div>
         </div>
@@ -646,7 +710,173 @@ function HomePage({
   );
 }
 
-// --- COMPONENTE PÁGINA TALLERES IA ---
+// --- COMPONENTE PÁGINA SERVICIOS DETALLE ---
+function ServiciosDetallePage({ onContactRequest }: { onContactRequest: (m: string) => void }) {
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0 space-y-24">
+      {/* HEADER DE LA SECCIÓN */}
+      <header className="space-y-6">
+        <div className="flex items-center gap-4 text-red-700">
+          <Briefcase size={24} />
+          <span className="text-[10px] font-black uppercase tracking-[0.4em]">Soluciones Corporativas</span>
+        </div>
+        <h1 className="text-5xl md:text-7xl font-black text-gray-900 tracking-tighter leading-none">
+          Servicios <span className="text-red-700">Especializados</span>
+        </h1>
+        <p className="text-xl text-gray-500 font-medium leading-relaxed max-w-3xl">
+          Ingeniería técnica y jurídica de alto nivel para despliegues de {highlightIA("IA")} en entornos profesionales exigentes.
+        </p>
+      </header>
+
+      {/* BLOQUE 1: CONSULTORÍA DE IMPLANTACIÓN */}
+      <section className="bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 shadow-sm hover:shadow-xl transition-all group border-b-4 border-b-transparent hover:border-b-red-700 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-12 text-gray-50 -z-0 rotate-12 transition-transform group-hover:rotate-0 group-hover:scale-110 duration-700 opacity-20">
+          <Target size={240} />
+        </div>
+        <div className="relative z-10 grid md:grid-cols-12 gap-12">
+          <div className="md:col-span-5 space-y-8">
+            <div className="space-y-4">
+              <span className="bg-red-700 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Metodología Táctica</span>
+              <h2 className="text-4xl font-black text-gray-900 uppercase tracking-tighter leading-tight">Consultoría de Implantación</h2>
+              <p className="text-lg text-gray-500 font-medium leading-relaxed">
+                No instalamos herramientas, transformamos procesos. Nuestra consultoría se basa en un retorno de inversión (ROI) medible y una adopción cultural real.
+              </p>
+            </div>
+            <button 
+              onClick={() => onContactRequest("Hola, me gustaría recibir información sobre la Consultoría de Implantación de IA.")}
+              className="bg-gray-900 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-700 transition-all flex items-center gap-3 active:scale-95 shadow-xl"
+            >
+              SOLICITAR HOJA DE RUTA <ArrowRight size={16} />
+            </button>
+          </div>
+          <div className="md:col-span-7 grid sm:grid-cols-2 gap-4">
+            {[
+              { t: "Diagnóstico 360", d: "Auditoría de procesos actuales para identificar cuellos de botella automatizables con IA.", i: <Search /> },
+              { t: "Estrategia ROI", d: "Definición de KPIs claros para asegurar que la inversión genere un ahorro directo de tiempo y costes.", i: <Activity /> },
+              { t: "Gestión del Cambio", d: "Capacitación de equipos para vencer la resistencia tecnológica y maximizar el uso.", i: <Users /> },
+              { t: "Optimización Continua", d: "Ajuste fino de modelos y flujos de trabajo según el feedback real del negocio.", i: <RefreshCcw /> }
+            ].map((card, i) => (
+              <div key={i} className="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 hover:bg-red-700 hover:shadow-xl transition-all group/card border-b-4 border-b-transparent hover:border-b-red-700 space-y-4">
+                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-red-700 group-hover/card:bg-white group-hover/card:text-red-700 transition-all shadow-sm">
+                  {React.cloneElement(card.i as React.ReactElement<{ size?: number }>, { size: 24 })}
+                </div>
+                <h4 className="font-black text-gray-900 group-hover/card:text-white uppercase text-sm tracking-tight transition-colors">{card.t}</h4>
+                <p className="text-xs text-gray-500 font-bold leading-relaxed transition-colors group-hover/card:text-white/90">{card.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* BLOQUE 2: IA EN LOCAL (ON-PREMISE) */}
+      <section className="bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 shadow-sm hover:shadow-xl transition-all group border-b-4 border-b-transparent hover:border-b-red-700 flex flex-col lg:flex-row gap-12 items-center relative overflow-hidden">
+        <div className="absolute -right-20 -bottom-20 opacity-5 group-hover:scale-110 transition-transform duration-1000">
+           <Server size={400} />
+        </div>
+        <div className="space-y-10 flex-1 relative z-10">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+               <Server className="text-red-700 group-hover:text-white transition-colors" size={24} />
+               <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em] group-hover:text-white/60">Arquitectura Segura</span>
+            </div>
+            <h2 className="text-5xl font-black text-gray-900 uppercase tracking-tighter leading-none group-hover:text-white transition-colors">IA en Local <br/><span className="text-red-700 italic group-hover:text-white">On-Premise</span></h2>
+            <p className="text-xl text-gray-500 font-medium leading-relaxed group-hover:text-white/90 transition-colors">
+              Elimina la dependencia de la nube y protege tus activos más valiosos. Ejecutamos los modelos más potentes (Llama 3, Whisper, DeepSeek) directamente en tus servidores.
+            </p>
+          </div>
+          
+          <div className="grid sm:grid-cols-3 gap-6">
+            {[
+              { t: "Privacidad Radical", d: "Tus datos nunca salen de la infraestructura física de tu empresa.", i: <ShieldCheck /> },
+              { t: "Latencia Cero", d: "Respuestas instantáneas sin depender de la conexión a internet.", i: <Zap /> },
+              { t: "Control de Costes", d: "Sin cuotas por token. Un despliegue único de tu propiedad.", i: <Database /> }
+            ].map((item, i) => (
+              <div key={i} className="flex flex-col gap-4 group/item">
+                <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-red-700 group-hover/item:bg-white group-hover/item:text-red-700 transition-all border border-gray-100 flex-shrink-0">
+                  {React.cloneElement(item.i as React.ReactElement<{ size?: number }>, { size: 24 })}
+                </div>
+                <div>
+                  <h4 className="font-black text-gray-900 uppercase text-xs tracking-tight mb-1 group-hover:text-white transition-colors">{item.t}</h4>
+                  <p className="text-xs text-gray-500 font-medium leading-snug group-hover:text-white/80 transition-colors">{item.d}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* BLOQUE 3: CUMPLIMIENTO LEGAL */}
+      <section className="bg-gray-50 rounded-[4rem] p-10 md:p-16 border border-gray-100 relative overflow-hidden group/main">
+        <div className="absolute -bottom-10 -left-10 p-12 text-gray-200/50 -z-0 group-hover/main:scale-110 group-hover/main:rotate-6 transition-transform duration-1000">
+          <Scale size={320} />
+        </div>
+        <div className="relative z-10 space-y-12">
+          <div className="text-center space-y-4 max-w-2xl mx-auto">
+             <span className="bg-red-700 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Marco Jurídico Europeo</span>
+             <h2 className="text-4xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter leading-none">Cumplimiento Legal y Ético</h2>
+             <p className="text-lg text-gray-500 font-medium leading-relaxed">
+               Navegamos la complejidad normativa para que la innovación no se convierta en una contingencia legal.
+             </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+             {[
+               { t: "AI Act (Ley de IA)", d: "Clasificación de sistemas por riesgo, obligaciones de transparencia y marcado CE para sistemas de IA.", i: <FileCheck /> },
+               { t: "RGPD & LOPD", d: "Privacidad por diseño, evaluaciones de impacto (EIPD) y anonimización técnica de datos sensibles.", i: <ShieldAlert /> },
+               { t: "IP & Copyright", d: "Gestión de derechos de autor en el entrenamiento de modelos y protección de la propiedad intelectual propia.", i: <Scale /> }
+             ].map((card, i) => (
+               <div key={i} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 hover:bg-red-700 hover:shadow-xl transition-all group/card border-b-4 border-b-transparent hover:border-b-white space-y-6">
+                  <div className="w-14 h-14 bg-gray-50 text-red-700 rounded-2xl flex items-center justify-center transition-all group-hover/card:bg-white group-hover/card:text-red-700 shadow-sm">
+                    {React.cloneElement(card.i as React.ReactElement<{ size?: number }>, { size: 30 })}
+                  </div>
+                  <h4 className="font-black text-gray-900 group-hover/card:text-white uppercase text-lg tracking-tight leading-tight transition-colors">{card.t}</h4>
+                  <p className="text-sm text-gray-500 font-medium leading-relaxed transition-colors group-hover/card:text-white/90">{card.d}</p>
+                  <ul className="space-y-2 pt-2 border-t border-gray-50 transition-colors group-hover/card:border-white/20">
+                    <li className="text-[9px] font-black text-gray-400 uppercase flex items-center gap-2 group-hover/card:text-white/60"><Check size={12} className="text-red-700 group-hover/card:text-white"/> Auditoría de Riesgos</li>
+                    <li className="text-[9px] font-black text-gray-400 uppercase flex items-center gap-2 group-hover/card:text-white/60"><Check size={12} className="text-red-700 group-hover/card:text-white"/> Certificación Técnica</li>
+                  </ul>
+               </div>
+             ))}
+          </div>
+
+          <div className="bg-gray-900 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-8 text-white shadow-2xl">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 bg-red-700 rounded-2xl flex items-center justify-center shrink-0">
+                <ShieldCheck size={32} />
+              </div>
+              <div className="space-y-1 text-left">
+                <h4 className="text-xl font-black uppercase tracking-tight">¿Cumples con el AI-Act?</h4>
+                <p className="text-sm text-gray-400 font-medium">Realizamos auditorías preventivas antes de que las sanciones entren en vigor.</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => onContactRequest("Deseo solicitar una auditoría de cumplimiento legal para mis sistemas de IA.")}
+              className="bg-white text-gray-900 px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-700 hover:text-white transition-all whitespace-nowrap active:scale-95 shadow-xl"
+            >
+              CONSULTAR EXPERTO
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA FINAL GLOBAL */}
+      <section className="bg-red-700 rounded-[3.5rem] p-12 md:p-20 text-center text-white space-y-8 shadow-2xl shadow-red-100 relative overflow-hidden group">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent opacity-50 group-hover:scale-110 transition-transform duration-1000"></div>
+        <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tighter relative z-10">Construyamos el futuro de tu organización</h3>
+        <p className="text-red-100 max-w-xl mx-auto font-medium text-lg relative z-10">Agendemos una sesión estratégica para evaluar tus necesidades técnicas, operativas y legales.</p>
+        <button 
+          onClick={() => onContactRequest("Hola Tligent, he visto vuestros servicios especializados y me gustaría concretar una reunión estratégica.")}
+          className="bg-white text-red-700 px-12 py-6 rounded-[2rem] font-black text-sm uppercase tracking-[0.3em] hover:bg-gray-900 hover:text-white transition-all shadow-2xl inline-flex items-center gap-6 active:scale-95 group relative z-10"
+        >
+          AGENDAR REUNIÓN 
+          <ArrowRight size={24} className="group-hover:translate-x-2 transition-transform" />
+        </button>
+      </section>
+    </div>
+  );
+}
+
+// --- OTROS COMPONENTES ---
 function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => void, onContactRequest: (m: string) => void }) {
   const [activeModule, setActiveModule] = useState<number | null>(null);
   const [emailsPerWeek, setEmailsPerWeek] = useState(20);
@@ -693,7 +923,6 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0 space-y-20">
-      {/* HEADER ALINEADO A LA IZQUIERDA */}
       <section className="text-left space-y-6">
         <div className="flex items-center gap-4 text-red-700">
           <Zap size={24} fill="currentColor" />
@@ -704,11 +933,10 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
           <span className="text-red-700 italic underline decoration-gray-900 decoration-4">Express</span>
         </h1>
         <p className="text-xl text-gray-500 font-medium leading-relaxed max-w-3xl">
-          Implementación inmediata y seguridad jurídica. Descubre el cronograma diseñado para transformar tu productividad blindando tu operativa legal.
+          Implementación inmediata y seguridad jurídica. Descubre el cronograma diseñado para transformar tu productivity blindando tu operativa legal.
         </p>
       </section>
 
-      {/* CRONOGRAMA ACORDEÓN */}
       <section className="bg-white border border-gray-100 rounded-[3rem] shadow-sm overflow-hidden">
         <div className="p-8 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
           <div>
@@ -763,9 +991,7 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      {/* CHARTS SECTION */}
       <section className="grid md:grid-cols-2 gap-8">
-        {/* Radar Skills */}
         <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm flex flex-col items-center">
           <div className="w-full mb-10">
             <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Competencias Adquiridas</h3>
@@ -788,7 +1014,6 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
           </div>
         </div>
 
-        {/* ROI Simulator */}
         <div className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm space-y-8">
           <div>
             <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Simulador de Ahorro</h3>
@@ -840,7 +1065,6 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      {/* COMPLIANCE CHECKLIST REDISEÑADO A BLANCO */}
       <section className="bg-white border border-gray-100 rounded-[4rem] p-10 md:p-16 text-gray-900 relative overflow-hidden shadow-sm">
         <div className="absolute top-0 right-0 p-12 text-gray-50 rotate-12 -z-0">
           <ShieldCheck size={180} />
@@ -890,7 +1114,6 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      {/* REQUIREMENTS */}
       <section className="bg-gray-50 border border-gray-100 rounded-[3rem] p-10 md:p-16">
         <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tighter mb-10 flex items-center gap-4">
           <div className="w-10 h-10 bg-red-700 text-white rounded-xl flex items-center justify-center"><Laptop size={20} /></div>
@@ -911,7 +1134,6 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      {/* CTA final de página talleres */}
       <section className="bg-red-700 rounded-[3rem] p-12 text-center text-white space-y-6 shadow-2xl shadow-red-100">
         <h3 className="text-3xl font-black uppercase tracking-tighter">¿Listo para transformar tu organización?</h3>
         <p className="text-red-100 max-w-xl mx-auto font-medium">Ofrecemos modalidades de precio cerrado o planes personalizados adaptados a las necesidades de tu Pyme.</p>
@@ -927,11 +1149,9 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
   );
 }
 
-// --- COMPONENTE PÁGINA BOOTCAMP IA ---
 function BootcampPage({ setView, onContactRequest }: { setView: (v: View) => void, onContactRequest: (m: string) => void }) {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0">
-      {/* HEADER PROGRAMA */}
       <header className="mb-20 space-y-6">
         <div className="flex items-center gap-4 text-red-700">
           <Zap size={24} fill="currentColor" />
@@ -962,7 +1182,6 @@ function BootcampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </header>
 
-      {/* ESTRUCTURA DE SESIONES */}
       <section className="mb-24">
         <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-0.3em mb-12 flex items-center gap-4">
           <span className="w-12 h-px bg-gray-200"></span> Estructura y Contenido de las Sesiones
@@ -1014,7 +1233,6 @@ function BootcampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      {/* ECOSISTEMA DE HERRAMIENTAS */}
       <section className="mb-24 bg-white border border-gray-100 rounded-[3.5rem] p-10 md:p-16 relative overflow-hidden shadow-sm">
         <div className="absolute top-0 right-0 p-12 text-gray-50 rotate-12 -z-0">
           <Terminal size={120} />
@@ -1040,7 +1258,6 @@ function BootcampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      {/* CTA FINAL BOOTCAMP */}
       <section className="bg-red-700 rounded-[3rem] p-12 text-center text-white space-y-6 shadow-2xl shadow-red-100">
         <h3 className="text-3xl font-black uppercase tracking-tighter">¿Listo para transformar tu forma de trabajar?</h3>
         <p className="text-red-100 max-w-xl mx-auto font-medium">Ofrecemos modalidades de precio cerrado o planes personalizados adaptados a las necesidades de tu organización.</p>
@@ -1052,11 +1269,11 @@ function BootcampPage({ setView, onContactRequest }: { setView: (v: View) => voi
           <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
         </button>
       </section>
+
     </div>
   );
 }
 
-// --- COMPONENTE PÁGINA MINICAMP IA ---
 function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => void, onContactRequest: (m: string) => void }) {
   const adaptacionData = [
     { name: 'Contenido Alumnos', value: 40 },
@@ -1073,7 +1290,6 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0 space-y-20 font-sans">
-      {/* HEADER ALINEADO A LA IZQUIERDA */}
       <header className="text-left space-y-6">
         <div className="flex items-center gap-4 text-red-700">
           <Presentation size={24} />
@@ -1087,15 +1303,14 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </p>
       </header>
 
-      {/* CURSO CREADO PARA TI */}
       <section className="bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 shadow-sm overflow-hidden relative">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <div className="space-y-4">
-               <span className="bg-red-700 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Personalizado</span>
-               <h2 className="text-4xl font-black text-gray-900 uppercase tracking-tighter">Un Curso Creado para Ti</h2>
+               <span className="bg-red-700 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Personalizada</span>
+               <h2 className="text-4xl font-black text-gray-900 uppercase tracking-tighter">Una Sesión Creada para Ti</h2>
                <p className="text-lg text-gray-500 font-medium leading-relaxed">
-                  Este no es un curso genérico. Es una experiencia de aprendizaje dinámica que se moldea según las preguntas y desafíos reales de los participantes.
+                  Esta no es una sesión genérica. Es una experiencia de aprendizaje dinámica que se moldea según las preguntas y desafíos reales de los participantes.
                </p>
             </div>
             <div className="bg-red-50 border-l-4 border-red-700 p-8 rounded-r-3xl space-y-2 shadow-sm">
@@ -1129,7 +1344,6 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      {/* PARADIGMA: BUSCAR VS GENERAR */}
       <section className="space-y-12">
         <h2 className="text-3xl font-black text-gray-900 text-center uppercase tracking-tighter">El Cambio de Paradigma: Buscar vs. Generar</h2>
         <div className="grid md:grid-cols-2 gap-8">
@@ -1172,7 +1386,6 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      {/* HERRAMIENTAS */}
       <section className="bg-gray-50 rounded-[4rem] p-10 md:p-16 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-12 text-gray-100 rotate-12 -z-0">
           <Layers size={180} />
@@ -1212,7 +1425,6 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      {/* EDICION Y PERSONALIZACION */}
       <section className="grid md:grid-cols-2 gap-8">
           <div className="bg-white border border-gray-100 p-10 rounded-[3rem] shadow-sm space-y-6">
             <div className="flex items-center gap-4 text-red-700">
@@ -1253,7 +1465,6 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
           </div>
       </section>
 
-      {/* NOTEBOOK LM REDISEÑADO A BLANCO */}
       <section className="bg-white border border-gray-100 rounded-[4rem] p-10 md:p-16 text-gray-900 relative overflow-hidden shadow-sm">
         <div className="absolute top-0 right-0 p-12 text-gray-50 rotate-12 -z-0">
           <BookOpen size={180} />
@@ -1280,7 +1491,6 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      {/* ETICA Y LEGALIDAD */}
       <section className="grid lg:grid-cols-2 gap-8">
           <div className="bg-white border border-gray-100 p-10 rounded-[3rem] shadow-sm space-y-6">
             <div className="flex items-center gap-4 text-red-700">
@@ -1325,7 +1535,6 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
           </div>
       </section>
 
-      {/* CTA FINAL MINICAMP */}
       <section className="bg-red-700 rounded-[3rem] p-12 text-center text-white space-y-6 shadow-2xl shadow-red-100">
         <h3 className="text-3xl font-black uppercase tracking-tighter">¿A qué estás esperando?</h3>
         <p className="text-red-100 max-w-xl mx-auto font-medium">Sesiones dinámicas, directas y adaptadas para que nadie se quede atrás en la revolución tecnológica.</p>
@@ -1337,7 +1546,6 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
           <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
         </button>
       </section>
-
     </div>
   );
 }

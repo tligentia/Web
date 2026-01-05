@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, Home, BookOpen, Zap, Presentation, Video, Mail, ChevronRight, X } from 'lucide-react';
+import { Menu, Home, BookOpen, Zap, Presentation, Video, Mail, ChevronRight, X, Briefcase, Search } from 'lucide-react';
 
 interface NavMenuProps {
-  onNavigate: (view: 'home' | 'bootcamp' | 'talleres' | 'minicamp', section?: string) => void;
+  onNavigate: (view: 'home' | 'bootcamp' | 'talleres' | 'minicamp' | 'servicios_detalle' | 'guia', section?: string) => void;
 }
 
 export const NavMenu: React.FC<NavMenuProps> = ({ onNavigate }) => {
@@ -22,7 +23,9 @@ export const NavMenu: React.FC<NavMenuProps> = ({ onNavigate }) => {
     { name: 'BootCamp IA', icon: <BookOpen size={16} />, action: () => onNavigate('bootcamp') },
     { name: 'Taller IA', icon: <Zap size={16} />, action: () => onNavigate('talleres') },
     { name: 'MiniCamp IA', icon: <Presentation size={16} />, action: () => onNavigate('minicamp') },
+    { name: 'Servicios Pro', icon: <Briefcase size={16} />, action: () => onNavigate('servicios_detalle') },
     { name: 'ViTAG', icon: <Video size={16} />, action: () => onNavigate('home', 'vitag') },
+    { name: 'GuIA', icon: <Search size={16} />, action: () => onNavigate('guia') },
     { name: 'Contacto', icon: <Mail size={16} />, action: () => onNavigate('home', 'contacto') },
   ];
 
@@ -53,27 +56,27 @@ export const NavMenu: React.FC<NavMenuProps> = ({ onNavigate }) => {
             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Navegación</h3>
           </div>
           
-          <div className="p-2">
+          <div className="p-1">
             {items.map((item, i) => (
               <button
                 key={i}
                 onClick={() => handleAction(item.action)}
-                className="w-full group flex items-center p-3 rounded-xl transition-all duration-200 hover:bg-gray-900 text-left"
+                className="w-full group flex items-center p-2 rounded-xl transition-all duration-200 hover:bg-gray-900 text-left"
               >
-                <div className="w-10 h-10 rounded-lg bg-gray-50 text-gray-400 flex items-center justify-center group-hover:bg-red-700 group-hover:text-white transition-all">
-                  {item.icon}
+                <div className="w-8 h-8 rounded-lg bg-gray-50 text-gray-400 flex items-center justify-center group-hover:bg-red-700 group-hover:text-white transition-all">
+                  {React.cloneElement(item.icon as React.ReactElement<{ size?: number }>, { size: 14 })}
                 </div>
                 <div className="ml-3 flex-1 flex items-center justify-between">
-                  <span className="text-sm font-bold text-gray-900 group-hover:text-white transition-colors uppercase tracking-tight">
+                  <span className="text-xs font-bold text-gray-900 group-hover:text-white transition-colors uppercase tracking-tight">
                     {item.name}
                   </span>
-                  <ChevronRight size={14} className="text-gray-200 group-hover:text-white/20 transition-all transform group-hover:translate-x-1" />
+                  <ChevronRight size={12} className="text-gray-200 group-hover:text-white/20 transition-all transform group-hover:translate-x-1" />
                 </div>
               </button>
             ))}
           </div>
 
-          <div className="p-3 border-t border-gray-50 bg-gray-50/30 flex justify-center">
+          <div className="p-2 border-t border-gray-50 bg-gray-50/30 flex justify-center">
             <p className="text-[8px] font-black text-gray-300 uppercase tracking-[0.3em]">Tligent Corporate Site</p>
           </div>
         </div>

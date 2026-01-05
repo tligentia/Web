@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Sparkles, HelpCircle, AlertCircle, CheckCircle2, Key, ArrowRight, Loader2, Home } from 'lucide-react';
 import { COLORS, validateKey, listAvailableModels, fetchVaultKey } from './Parameters';
@@ -11,7 +12,7 @@ interface ShellProps {
   children: React.ReactNode;
   apiKey: string;
   onApiKeySave: (key: string) => void;
-  onNavigate: (view: any, section?: string) => void;
+  onNavigate: (view: 'home' | 'bootcamp' | 'talleres' | 'minicamp' | 'servicios_detalle' | 'guia', section?: string) => void;
   view: string;
 }
 
