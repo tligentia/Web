@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   ArrowRight, 
   ArrowLeft,
@@ -59,8 +59,32 @@ import { crypto } from './Plantilla/Parameters';
 
 type View = 'home' | 'bootcamp' | 'talleres' | 'minicamp' | 'servicios_detalle' | 'guia';
 
+const PATH_MAP: Record<string, View> = {
+  '/': 'home',
+  '/home': 'home',
+  '/bootcamp': 'bootcamp',
+  '/talleres': 'talleres',
+  '/minicamp': 'minicamp',
+  '/servicios': 'servicios_detalle',
+  '/guia': 'guia'
+};
+
+const VIEW_TO_PATH: Record<View, string> = {
+  'home': '/',
+  'bootcamp': '/BootCamp',
+  'talleres': '/Talleres',
+  'minicamp': '/MiniCamp',
+  'servicios_detalle': '/Servicios',
+  'guia': '/GuIA'
+};
+
 export default function App() {
-  const [view, setView] = useState<View>('home');
+  const [view, setView] = useState<View>(() => {
+    if (typeof window === 'undefined') return 'home';
+    const path = window.location.pathname.toLowerCase();
+    return PATH_MAP[path] || 'home';
+  });
+  
   const [contactPrefill, setContactPrefill] = useState('');
   
   const [apiKey, setApiKey] = useState(() => {
@@ -73,6 +97,16 @@ export default function App() {
     localStorage.setItem('app_apikey_v2', key);
   };
 
+  // Manejador de eventos popstate para navegación del navegador (atrás/adelante)
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.toLowerCase();
+      setView(PATH_MAP[path] || 'home');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [view]);
@@ -80,11 +114,14 @@ export default function App() {
   const handleNavigate = (newView: View, section?: string) => {
     if (view !== newView) {
       setView(newView);
+      // Actualizar la URL sin recargar
+      window.history.pushState({}, '', VIEW_TO_PATH[newView]);
+      
       if (section) {
         setTimeout(() => {
           const element = document.getElementById(section);
           if (element) element.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+        }, 150);
       }
     } else if (section) {
       const element = document.getElementById(section);
@@ -96,11 +133,11 @@ export default function App() {
 
   const handleContactNavigation = (message: string) => {
     setContactPrefill(message);
-    setView('home');
+    handleNavigate('home');
     setTimeout(() => {
       const element = document.getElementById('contacto');
       if (element) element.scrollIntoView({ behavior: 'smooth' });
-    }, 150);
+    }, 250);
   };
 
   return (
@@ -108,14 +145,14 @@ export default function App() {
       <Shell apiKey={apiKey} onApiKeySave={saveApiKey} onNavigate={handleNavigate} view={view}>
         {view === 'home' && (
           <HomePage 
-            setView={setView} 
+            setView={handleNavigate} 
             prefillMessage={contactPrefill} 
             clearPrefill={() => setContactPrefill('')} 
           />
         )}
-        {view === 'bootcamp' && <BootcampPage setView={setView} onContactRequest={handleContactNavigation} />}
-        {view === 'talleres' && <TalleresPage setView={setView} onContactRequest={handleContactNavigation} />}
-        {view === 'minicamp' && <MiniCampPage setView={setView} onContactRequest={handleContactNavigation} />}
+        {view === 'bootcamp' && <BootcampPage setView={handleNavigate} onContactRequest={handleContactNavigation} />}
+        {view === 'talleres' && <TalleresPage setView={handleNavigate} onContactRequest={handleContactNavigation} />}
+        {view === 'minicamp' && <MiniCampPage setView={handleNavigate} onContactRequest={handleContactNavigation} />}
         {view === 'servicios_detalle' && <ServiciosDetallePage onContactRequest={handleContactNavigation} />}
         {view === 'guia' && <GuiaPage />}
       </Shell>
@@ -129,7 +166,7 @@ const highlightIA = (text: string) => {
   );
 };
 
-// --- COMPONENTE PÁGINA GUIA CON RECORTE SEGURO ---
+// --- COMPONENTE PÁGINA GUIA ---
 function GuiaPage() {
   const [loading, setLoading] = useState(true);
 
@@ -156,7 +193,6 @@ function GuiaPage() {
         </a>
       </div>
 
-      {/* Contenedor con Recorte: Ocultamos Header y Footer del iframe */}
       <div className="flex-1 w-full bg-white border border-gray-100 rounded-[2.5rem] shadow-sm overflow-hidden relative">
         {loading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-20 gap-4">
@@ -165,7 +201,6 @@ function GuiaPage() {
           </div>
         )}
         
-        {/* Recorte: Desplazamos el iframe hacia arriba y le damos más altura para sacar el footer del área visible */}
         <div className="w-full h-full relative" style={{ marginTop: '-80px', height: 'calc(100% + 220px)' }}>
           <iframe 
             src="https://guia.tligent.com" 
@@ -175,7 +210,6 @@ function GuiaPage() {
           />
         </div>
         
-        {/* Máscaras para asegurar que el recorte se vea limpio */}
         <div className="absolute inset-x-0 top-0 h-4 bg-white z-10"></div>
         <div className="absolute inset-x-0 bottom-0 h-4 bg-white z-10"></div>
       </div>
@@ -239,7 +273,6 @@ function HomePage({
 
   return (
     <div className="animate-in fade-in duration-700 w-full space-y-24">
-      {/* HERO SECTION */}
       <section id="inicio" className="w-full pt-8 pb-6 md:pt-10 md:pb-8 border-b border-gray-100">
         <div className="grid md:grid-cols-10 gap-10 items-center">
           <div className="md:col-span-6 space-y-6">
@@ -280,7 +313,6 @@ function HomePage({
                 </div>
               </div>
 
-              {/* CARD SERVICIOS PRO CORREGIDA PARA LECTURA EN HOVER */}
               <div 
                 onClick={() => setView('servicios_detalle')}
                 className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-lg flex items-center gap-6 group hover:bg-red-700 hover:border-red-700 transition-all duration-300 cursor-pointer hover:shadow-xl active:scale-95"
@@ -298,7 +330,6 @@ function HomePage({
         </div>
       </section>
 
-      {/* QUÉ HACEMOS */}
       <section id="servicios" className="w-full">
         <div className="mb-10">
           <h2 className="text-3xl font-black text-gray-900 tracking-tighter uppercase mb-2">Qué Hacemos</h2>
@@ -350,7 +381,6 @@ function HomePage({
         </div>
       </section>
 
-      {/* PROGRAMAS IA AMPLIADO */}
       <section id="ia" className="w-full">
         <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
@@ -428,7 +458,6 @@ function HomePage({
         </div>
       </section>
 
-      {/* VITAG SECTION REDISEÑADA */}
       <section id="vitag" className="w-full bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 text-gray-900 overflow-hidden relative shadow-sm">
         <div className="absolute top-0 right-0 p-12 text-gray-50 -z-0">
           <Video size={200} />
@@ -514,7 +543,6 @@ function HomePage({
         </div>
       </section>
 
-      {/* SECTORES A LOS QUE NOS DIRIGIMOS */}
       <section id="sectores" className="w-full">
         <div className="mb-10">
           <h2 className="text-3xl font-black text-gray-900 tracking-tighter uppercase mb-2">Sectores a los que nos dirigimos</h2>
@@ -555,7 +583,6 @@ function HomePage({
         </div>
       </section>
 
-      {/* SOBRE TLIGENT */}
       <section id="sobre-tligent" className="w-full scroll-mt-24">
         <div className="mb-12">
           <h2 className="text-3xl font-black text-gray-900 tracking-tighter uppercase mb-4">Sobre Tligent</h2>
@@ -591,7 +618,6 @@ function HomePage({
         </div>
       </section>
 
-      {/* CONTACTO ACTUALIZADO */}
       <section id="contacto" className="w-full py-12 pb-24 scroll-mt-32 border-t border-gray-100">
         <div className="grid md:grid-cols-2 gap-16">
           <div className="space-y-8">
@@ -714,7 +740,6 @@ function HomePage({
 function ServiciosDetallePage({ onContactRequest }: { onContactRequest: (m: string) => void }) {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0 space-y-24">
-      {/* HEADER DE LA SECCIÓN */}
       <header className="space-y-6">
         <div className="flex items-center gap-4 text-red-700">
           <Briefcase size={24} />
@@ -728,7 +753,6 @@ function ServiciosDetallePage({ onContactRequest }: { onContactRequest: (m: stri
         </p>
       </header>
 
-      {/* BLOQUE 1: CONSULTORÍA DE IMPLANTACIÓN */}
       <section className="bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 shadow-sm hover:shadow-xl transition-all group border-b-4 border-b-transparent hover:border-b-red-700 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-12 text-gray-50 -z-0 rotate-12 transition-transform group-hover:rotate-0 group-hover:scale-110 duration-700 opacity-20">
           <Target size={240} />
@@ -768,7 +792,6 @@ function ServiciosDetallePage({ onContactRequest }: { onContactRequest: (m: stri
         </div>
       </section>
 
-      {/* BLOQUE 2: IA EN LOCAL (ON-PREMISE) */}
       <section className="bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 shadow-sm hover:shadow-xl transition-all group border-b-4 border-b-transparent hover:border-b-red-700 flex flex-col lg:flex-row gap-12 items-center relative overflow-hidden">
         <div className="absolute -right-20 -bottom-20 opacity-5 group-hover:scale-110 transition-transform duration-1000">
            <Server size={400} />
@@ -805,7 +828,6 @@ function ServiciosDetallePage({ onContactRequest }: { onContactRequest: (m: stri
         </div>
       </section>
 
-      {/* BLOQUE 3: CUMPLIMIENTO LEGAL */}
       <section className="bg-gray-50 rounded-[4rem] p-10 md:p-16 border border-gray-100 relative overflow-hidden group/main">
         <div className="absolute -bottom-10 -left-10 p-12 text-gray-200/50 -z-0 group-hover/main:scale-110 group-hover/main:rotate-6 transition-transform duration-1000">
           <Scale size={320} />
@@ -859,7 +881,6 @@ function ServiciosDetallePage({ onContactRequest }: { onContactRequest: (m: stri
         </div>
       </section>
 
-      {/* CTA FINAL GLOBAL */}
       <section className="bg-red-700 rounded-[3.5rem] p-12 md:p-20 text-center text-white space-y-8 shadow-2xl shadow-red-100 relative overflow-hidden group">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent opacity-50 group-hover:scale-110 transition-transform duration-1000"></div>
         <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tighter relative z-10">Construyamos el futuro de tu organización</h3>
@@ -876,7 +897,7 @@ function ServiciosDetallePage({ onContactRequest }: { onContactRequest: (m: stri
   );
 }
 
-// --- OTROS COMPONENTES ---
+// --- OTROS COMPONENTES: TALLERES, BOOTCAMP, MINICAMP ---
 function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => void, onContactRequest: (m: string) => void }) {
   const [activeModule, setActiveModule] = useState<number | null>(null);
   const [emailsPerWeek, setEmailsPerWeek] = useState(20);
@@ -1515,7 +1536,7 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
                <ShieldCheck size={32} />
                <h3 className="text-xl font-black uppercase text-gray-900">Legalidad y Ética</h3>
             </div>
-            <p className="text-gray-600 text-sm font-bold uppercase tracking-tight italic">Acta Europea de {highlightIA("IA")}: No toda capacidad técnica es legal.</p>
+            <p className="text-600 text-sm font-bold uppercase tracking-tight italic">Acta Europea de {highlightIA("IA")}: No toda capacidad técnica es legal.</p>
             <div className="space-y-4">
                <div className="flex items-start gap-4">
                   <div className="w-6 h-6 rounded-full bg-red-700 text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">!</div>
@@ -1539,6 +1560,7 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         <h3 className="text-3xl font-black uppercase tracking-tighter">¿A qué estás esperando?</h3>
         <p className="text-red-100 max-w-xl mx-auto font-medium">Sesiones dinámicas, directas y adaptadas para que nadie se quede atrás en la revolución tecnológica.</p>
         <button 
+          // Fix: Corrected variable name from onContactNavigation to onContactRequest
           onClick={() => onContactRequest("Hola, me gustaría recibir más información sobre el programa MiniCamp IA.")}
           className="bg-white text-red-700 px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-0.25em hover:bg-gray-900 hover:text-white transition-all shadow-xl inline-flex items-center gap-4 active:scale-95 group"
         >
