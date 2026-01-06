@@ -9,23 +9,44 @@ interface NavMenuProps {
 export const NavMenu: React.FC<NavMenuProps> = ({ onNavigate }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setIsOpen(false);
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
+    };
   }, []);
 
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (isOpen) {
+      timeoutRef.current = window.setTimeout(() => {
+        setIsOpen(false);
+      }, 1000);
+    }
+  };
+
   const items = [
-    { name: 'Home', icon: <Home size={16} />, action: () => onNavigate('home') },
-    { name: 'BootCamp IA', icon: <BookOpen size={16} />, action: () => onNavigate('bootcamp') },
-    { name: 'Taller IA', icon: <Zap size={16} />, action: () => onNavigate('talleres') },
-    { name: 'MiniCamp IA', icon: <Presentation size={16} />, action: () => onNavigate('minicamp') },
-    { name: 'Servicios Pro', icon: <Briefcase size={16} />, action: () => onNavigate('servicios_detalle') },
+    { name: 'Home', icon: <Home size={16} />, action: () => onNavigate('home', 'inicio') },
+    { name: 'BootCamp IA', icon: <BookOpen size={16} />, action: () => onNavigate('bootcamp', 'bootcamp-top') },
+    { name: 'Taller IA', icon: <Zap size={16} />, action: () => onNavigate('talleres', 'talleres-top') },
+    { name: 'MiniCamp IA', icon: <Presentation size={16} />, action: () => onNavigate('minicamp', 'minicamp-top') },
+    { name: 'Servicios Pro', icon: <Briefcase size={16} />, action: () => onNavigate('servicios_detalle', 'servicios-top') },
     { name: 'ViTAG', icon: <Video size={16} />, action: () => onNavigate('home', 'vitag') },
-    { name: 'GuIA', icon: <Search size={16} />, action: () => onNavigate('guia') },
+    { name: 'GuIA', icon: <Search size={16} />, action: () => onNavigate('guia', 'guia-top') },
     { name: 'Contacto', icon: <Mail size={16} />, action: () => onNavigate('home', 'contacto') },
   ];
 
@@ -35,7 +56,12 @@ export const NavMenu: React.FC<NavMenuProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div 
+      className="relative" 
+      ref={dropdownRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-300 font-bold focus:outline-none group ${

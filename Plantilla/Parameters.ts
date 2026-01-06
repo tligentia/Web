@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Modality } from "@google/genai";
 
 // --- DOMAIN LOGIC ---
@@ -14,7 +15,6 @@ export const SHEET_ID = '1wJkM8rmiXCrnB0K4h9jtme0m7f5I3y1j1PX5nmEaTII';
 
 /**
  * UI Theme configuration
- * Following requirements: Fondo blanco, contenidos en Negro, rojo y gris
  */
 export const COLORS = {
   bg: 'bg-white',
@@ -23,25 +23,46 @@ export const COLORS = {
   accent: 'text-gray-900',
 };
 
-// --- CRYPTO TOOL LOGIC ---
+// --- CRYPTO TOOL LOGIC (UTF-8 COMPLIANT) ---
 export const crypto = {
   obfuscate: (text: string, key: string = MASTER_KEY): string => {
     if (!text) return "";
-    const charData = text.split('').map((c, i) => 
-      c.charCodeAt(0) ^ key.charCodeAt(i % key.length)
-    );
-    return btoa(String.fromCharCode(...charData));
+    try {
+      // Usamos TextEncoder para soportar tildes y caracteres UTF-8
+      const encoder = new TextEncoder();
+      const textBytes = encoder.encode(text);
+      const keyBytes = encoder.encode(key);
+      
+      const charData = Array.from(textBytes).map((b, i) => 
+        b ^ keyBytes[i % keyBytes.length]
+      );
+      
+      let binary = '';
+      for (let i = 0; i < charData.length; i++) {
+        binary += String.fromCharCode(charData[i]);
+      }
+      return btoa(binary);
+    } catch (e) {
+      console.error("Crypto error:", e);
+      return "";
+    }
   },
   deobfuscate: (encoded: string, key: string = MASTER_KEY): string => {
     if (!encoded) return "";
     try {
-      const decoded = atob(encoded);
-      const charData = decoded.split('').map((c, i) => 
-        c.charCodeAt(0) ^ key.charCodeAt(i % key.length)
-      );
-      return String.fromCharCode(...charData);
+      const binary = atob(encoded);
+      const encoder = new TextEncoder();
+      const keyBytes = encoder.encode(key);
+      
+      const charData = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        charData[i] = binary.charCodeAt(i) ^ keyBytes[i % keyBytes.length];
+      }
+      
+      const decoder = new TextDecoder();
+      return decoder.decode(charData);
     } catch (e) {
-      return "Error: Decoding Failed";
+      return "Error: Formato inválido o clave incorrecta";
     }
   }
 };
@@ -51,9 +72,6 @@ const getActiveApiKey = () => {
   return localStorage.getItem('app_apikey_v2') || process.env.API_KEY;
 };
 
-/**
- * Recupera una clave específica de la bóveda de Google Sheets
- */
 export const fetchVaultKey = async (targetLabel: string, seed: string): Promise<string | null> => {
   try {
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Claves`;
@@ -71,7 +89,7 @@ export const fetchVaultKey = async (targetLabel: string, seed: string): Promise<
         }
     }
   } catch (e) {
-    console.error("SISTEMA: Error crítico al conectar con el Vault de Google Sheets", e);
+    console.error("SISTEMA: Error crítico al conectar con el Vault", e);
   }
   return null;
 };
@@ -81,16 +99,26 @@ export const listAvailableModels = async (): Promise<string[]> => {
   if (!apiKey) return ['gemini-3-flash-preview', 'gemini-3-pro-preview'];
   try {
     const ai = new GoogleGenAI({ apiKey });
-    const result = await ai.models.list();
-    const models: string[] = [];
-    for await (const m of result) {
-      const shortName = m.name.replace('models/', '');
-      if (!shortName.includes('1.5') && !shortName.includes('pro-vision')) {
-        models.push(shortName);
-      }
+    if (!ai.models || typeof ai.models.list !== 'function') {
+      throw new Error("Models API not available in this version");
     }
+    
+    const result = await ai.models.list();
+    const modelsSource = (result as any)?.models || result;
+    const models: string[] = [];
+    
+    if (Array.isArray(modelsSource)) {
+      modelsSource.forEach(m => {
+        const shortName = m.name?.replace('models/', '') || '';
+        if (shortName && !shortName.includes('1.5') && !shortName.includes('pro-vision')) {
+          models.push(shortName);
+        }
+      });
+    }
+    
     return models.length > 0 ? models : ['gemini-3-flash-preview', 'gemini-3-pro-preview'];
-  } catch {
+  } catch (e) {
+    console.warn("Could not list models via API, using defaults:", e);
     return [
       'gemini-3-flash-preview', 
       'gemini-3-pro-preview', 
@@ -131,17 +159,11 @@ export const askGemini = async (prompt: string, modelOverride?: string): Promise
   });
 
   if (isTTS) {
-    const hasAudio = !!response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    return hasAudio 
-      ? "SISTEMA: Audio generado con éxito. Este Sandbox es textual; para escuchar el resultado se requiere un nodo de salida de audio pcm."
-      : "SISTEMA: El modelo TTS no devolvió datos de audio válidos.";
+    return "SISTEMA: Audio generado con éxito. Sandbox textual activo.";
   }
 
   if (isImage) {
-    const hasImage = response.candidates?.[0]?.content?.parts?.some(p => p.inlineData);
-    return hasImage 
-      ? "SISTEMA: Imagen generada con éxito (Base64). Este Sandbox solo muestra texto."
-      : (response.text || "Imagen generada sin descripción textual.");
+    return response.candidates?.[0]?.content?.parts?.find(p => p.text)?.text || "SISTEMA: Imagen generada con éxito.";
   }
 
   return response.text || "No response received.";

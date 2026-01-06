@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Sparkles, HelpCircle, AlertCircle, CheckCircle2, Key, ArrowRight, Loader2, Home } from 'lucide-react';
+import { Sparkles, HelpCircle, AlertCircle, CheckCircle2, Key, ArrowRight, Loader2, Home, BookOpen } from 'lucide-react';
 import { COLORS, validateKey, listAvailableModels, fetchVaultKey } from './Parameters';
 import { Footer } from './Footer';
 import { Cookies } from './Cookies';
 import { Ajustes } from './Ajustes';
 import { Manual } from './Manual';
 import { NavMenu } from './NavMenu';
+import { AppMenu } from './AppMenu';
 
 interface ShellProps {
   children: React.ReactNode;
@@ -76,43 +77,44 @@ export const Shell: React.FC<ShellProps> = ({ children, apiKey, onApiKeySave, on
   return (
     <div className={`min-h-screen ${COLORS.bg} font-sans flex flex-col p-4 md:px-8 md:py-4 animate-in fade-in duration-700`}>
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md mb-4 border-b border-gray-100 pb-4 pt-4 flex justify-between items-center px-2">
-        <div>
-          <h1 
+        <div className="flex items-center gap-6">
+          <div 
             onClick={() => onNavigate('home')}
-            className="text-2xl font-black tracking-tighter text-gray-900 flex items-center gap-3 cursor-pointer group"
+            className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="w-8 h-8 rounded-full bg-red-700 flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform flex-shrink-0">
-              <span className="text-white text-base font-black">T</span>
+            <div className="w-10 h-10 rounded-full bg-red-700 flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform flex-shrink-0">
+              <span className="text-white text-xl font-black">T</span>
             </div>
-            Tligent
-          </h1>
-          <div className="flex items-center gap-3 mt-1 pl-1">
-            <div className="flex items-center gap-1.5">
-              {isKeyValid === true ? (
-                <span className="flex items-center gap-1 text-[8px] font-black text-green-600 uppercase tracking-widest bg-green-50 px-1.5 py-0.5 rounded-md border border-green-100">
-                  <CheckCircle2 size={8} /> AI ONLINE
-                </span>
-              ) : (
-                <span className="flex items-center gap-1 text-[8px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded-md border border-gray-100">
-                  <AlertCircle size={8} className="text-red-700" /> AI STANDBY
-                </span>
-              )}
+            <div>
+              <h1 className="text-2xl font-black tracking-tighter text-gray-900 leading-none">Tligent</h1>
+              <div className="flex items-center gap-2 mt-1">
+                {isKeyValid === true ? (
+                  <span className="flex items-center gap-1 text-[7px] font-black text-green-600 uppercase tracking-widest bg-green-50 px-1 py-0.5 rounded-md border border-green-100">
+                    <CheckCircle2 size={7} /> AI ONLINE
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-[7px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 px-1 py-0.5 rounded-md border border-gray-100">
+                    <AlertCircle size={7} className="text-red-700" /> AI STANDBY
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
+          {/* Botón Home si no estamos en home */}
           {view !== 'home' && (
             <button
               onClick={() => onNavigate('home')}
-              className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-white text-gray-900 border border-gray-100 hover:border-gray-900 transition-all duration-300 font-bold focus:outline-none group shadow-sm active:scale-95"
+              className="hidden sm:flex items-center space-x-2 px-3 py-2 rounded-xl bg-white text-gray-900 border border-gray-100 hover:border-gray-900 transition-all font-bold active:scale-95 shadow-sm"
             >
-              <div className="relative flex items-center justify-center">
-                  <Home size={16} className="text-gray-400 group-hover:text-gray-900 transition-colors" />
-              </div>
-              <span className="text-[10px] uppercase tracking-widest hidden sm:inline">Inicio</span>
+              <Home size={16} className="text-gray-400" />
+              <span className="text-[9px] uppercase tracking-widest">Inicio</span>
             </button>
           )}
+
+          {/* Menú de navegación principal */}
           <NavMenu onNavigate={onNavigate} />
         </div>
       </header>

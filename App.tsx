@@ -78,14 +78,23 @@ const VIEW_TO_PATH: Record<View, string> = {
   'guia': '/GuIA'
 };
 
+const normalizePath = (path: string): string => {
+  let p = path.toLowerCase();
+  if (p.length > 1 && p.endsWith('/')) {
+    p = p.slice(0, -1);
+  }
+  return p || '/';
+};
+
 export default function App() {
   const [view, setView] = useState<View>(() => {
     if (typeof window === 'undefined') return 'home';
-    const path = window.location.pathname.toLowerCase();
-    return PATH_MAP[path] || 'home';
+    const normalized = normalizePath(window.location.pathname);
+    return PATH_MAP[normalized] || 'home';
   });
   
   const [contactPrefill, setContactPrefill] = useState('');
+  const [pendingSection, setPendingSection] = useState<string | null>(null);
   
   const [apiKey, setApiKey] = useState(() => {
     if (typeof window === 'undefined') return '';
@@ -97,51 +106,73 @@ export default function App() {
     localStorage.setItem('app_apikey_v2', key);
   };
 
-  // Manejador de eventos popstate para navegación del navegador (atrás/adelante)
   useEffect(() => {
     const handlePopState = () => {
-      const path = window.location.pathname.toLowerCase();
-      setView(PATH_MAP[path] || 'home');
+      const normalized = normalizePath(window.location.pathname);
+      setView(PATH_MAP[normalized] || 'home');
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const titles: Record<View, string> = {
+      'home': 'Tligent · Tecnología e IA con garantías legales',
+      'bootcamp': 'BootCamp IA · Tligent',
+      'talleres': 'Talleres IA Express · Tligent',
+      'minicamp': 'MiniCamp IA · Tligent',
+      'servicios_detalle': 'Servicios Especializados · Tligent',
+      'guia': 'GuIA de Recursos IA · Tligent'
+    };
+    document.title = titles[view] || 'Tligent';
   }, [view]);
 
-  const handleNavigate = (newView: View, section?: string) => {
-    if (view !== newView) {
-      setView(newView);
-      // Actualizar la URL sin recargar
-      window.history.pushState({}, '', VIEW_TO_PATH[newView]);
-      
-      if (section) {
-        setTimeout(() => {
-          const element = document.getElementById(section);
-          if (element) element.scrollIntoView({ behavior: 'smooth' });
-        }, 150);
+  // Gestor de scroll automático tras cambios de vista o navegación interna
+  useEffect(() => {
+    if (pendingSection) {
+      const performScroll = () => {
+        const element = document.getElementById(pendingSection);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setPendingSection(null);
+          return true;
+        }
+        return false;
+      };
+
+      if (!performScroll()) {
+        const timer = setTimeout(performScroll, 300);
+        return () => clearTimeout(timer);
       }
+    }
+  }, [view, pendingSection]);
+
+  const handleNavigate = useCallback((newView: View, section?: string) => {
+    const targetPath = VIEW_TO_PATH[newView];
+    const currentPath = normalizePath(window.location.pathname);
+    const normalizedTarget = normalizePath(targetPath);
+
+    if (view !== newView || currentPath !== normalizedTarget) {
+      setPendingSection(section || 'top-of-page');
+      setView(newView);
+      window.history.pushState({}, '', targetPath);
     } else if (section) {
       const element = document.getElementById(section);
-      if (element) element.scrollIntoView({ behavior: 'smooth' });
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  };
+  }, [view]);
 
   const handleContactNavigation = (message: string) => {
     setContactPrefill(message);
-    handleNavigate('home');
-    setTimeout(() => {
-      const element = document.getElementById('contacto');
-      if (element) element.scrollIntoView({ behavior: 'smooth' });
-    }, 250);
+    handleNavigate('home', 'contacto');
   };
 
   return (
-    <div className="animate-in fade-in duration-700">
+    <div id="top-of-page" className="animate-in fade-in duration-700">
       <Shell apiKey={apiKey} onApiKeySave={saveApiKey} onNavigate={handleNavigate} view={view}>
         {view === 'home' && (
           <HomePage 
@@ -166,12 +197,11 @@ const highlightIA = (text: string) => {
   );
 };
 
-// --- COMPONENTE PÁGINA GUIA ---
 function GuiaPage() {
   const [loading, setLoading] = useState(true);
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full h-[88vh] flex flex-col space-y-4">
+    <div id="guia-top" className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full h-[88vh] flex flex-col space-y-4 scroll-mt-24">
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-red-700 rounded-lg text-white">
@@ -217,13 +247,12 @@ function GuiaPage() {
   );
 }
 
-// --- COMPONENTE PÁGINA PRINCIPAL ---
 function HomePage({ 
   setView, 
   prefillMessage, 
   clearPrefill 
 }: { 
-  setView: (v: View) => void, 
+  setView: (v: View, s?: string) => void, 
   prefillMessage: string,
   clearPrefill: () => void 
 }) {
@@ -265,15 +294,18 @@ function HomePage({
 
   const jumpToContact = (topic: string) => {
     setMensaje(`Hola, me interesa obtener información sobre la funcionalidad de ${topic} de ViTAG.`);
-    document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' });
-    setTimeout(() => {
-      nombreInputRef.current?.focus();
-    }, 800);
+    const element = document.getElementById('contacto');
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+        setTimeout(() => {
+            nombreInputRef.current?.focus();
+        }, 800);
+    }
   };
 
   return (
     <div className="animate-in fade-in duration-700 w-full space-y-24">
-      <section id="inicio" className="w-full pt-8 pb-6 md:pt-10 md:pb-8 border-b border-gray-100">
+      <section id="inicio" className="w-full pt-8 pb-6 md:pt-10 md:pb-8 border-b border-gray-100 scroll-mt-24">
         <div className="grid md:grid-cols-10 gap-10 items-center">
           <div className="md:col-span-6 space-y-6">
             <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-gray-900 leading-none">
@@ -287,7 +319,7 @@ function HomePage({
             </p>
             <div className="flex flex-wrap gap-4 pt-2">
               <button 
-                onClick={() => document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={() => setView('home', 'contacto')}
                 className="bg-red-700 text-white px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-[0.25em] hover:bg-red-800 transition-all shadow-[0_20px_40px_-12px_rgba(185,28,28,0.4)] flex items-center gap-4 active:scale-95 group"
               >
                 HABLEMOS DE TU PROYECTO 
@@ -330,7 +362,7 @@ function HomePage({
         </div>
       </section>
 
-      <section id="servicios" className="w-full">
+      <section id="servicios" className="w-full scroll-mt-24">
         <div className="mb-10">
           <h2 className="text-3xl font-black text-gray-900 tracking-tighter uppercase mb-2">Qué Hacemos</h2>
           <p className="text-base text-gray-500 max-w-2xl font-medium">Integramos tecnología, {highlightIA("IA")} y ciberseguridad con visión legal para una base sólida y segura.</p>
@@ -381,7 +413,7 @@ function HomePage({
         </div>
       </section>
 
-      <section id="ia" className="w-full">
+      <section id="ia" className="w-full scroll-mt-24">
         <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <h2 className="text-3xl font-black text-gray-900 tracking-tighter uppercase mb-2">Programas {highlightIA("IA")}</h2>
@@ -458,7 +490,7 @@ function HomePage({
         </div>
       </section>
 
-      <section id="vitag" className="w-full bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 text-gray-900 overflow-hidden relative shadow-sm">
+      <section id="vitag" className="w-full bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 text-gray-900 overflow-hidden relative shadow-sm scroll-mt-24">
         <div className="absolute top-0 right-0 p-12 text-gray-50 -z-0">
           <Video size={200} />
         </div>
@@ -543,7 +575,7 @@ function HomePage({
         </div>
       </section>
 
-      <section id="sectores" className="w-full">
+      <section id="sectores" className="w-full scroll-mt-24">
         <div className="mb-10">
           <h2 className="text-3xl font-black text-gray-900 tracking-tighter uppercase mb-2">Sectores a los que nos dirigimos</h2>
           <p className="text-base text-gray-500 max-w-2xl font-medium">Soluciones tácticas adaptadas a las necesidades específicas de cada ámbito profesional.</p>
@@ -612,13 +644,13 @@ function HomePage({
             </div>
             <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Cómo trabajamos</h3>
             <p className="text-base text-gray-500 font-medium leading-relaxed">
-              Partimos de una fase de diagnóstico, definimos objetivos realistas y construimos un plan de action, priorizando quick wins y una adopción gradual de la tecnología.
+              Partimos de una fase de diagnóstico, definimos objetivos realistas y construimos un plan de acción, priorizando quick wins y una adopción gradual de la tecnología.
             </p>
           </div>
         </div>
       </section>
 
-      <section id="contacto" className="w-full py-12 pb-24 scroll-mt-32 border-t border-gray-100">
+      <section id="contacto" className="w-full py-12 pb-24 scroll-mt-24 border-t border-gray-100">
         <div className="grid md:grid-cols-2 gap-16">
           <div className="space-y-8">
             <div>
@@ -736,10 +768,9 @@ function HomePage({
   );
 }
 
-// --- COMPONENTE PÁGINA SERVICIOS DETALLE ---
 function ServiciosDetallePage({ onContactRequest }: { onContactRequest: (m: string) => void }) {
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0 space-y-24">
+    <div id="servicios-top" className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0 space-y-24 scroll-mt-24">
       <header className="space-y-6">
         <div className="flex items-center gap-4 text-red-700">
           <Briefcase size={24} />
@@ -753,7 +784,7 @@ function ServiciosDetallePage({ onContactRequest }: { onContactRequest: (m: stri
         </p>
       </header>
 
-      <section className="bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 shadow-sm hover:shadow-xl transition-all group border-b-4 border-b-transparent hover:border-b-red-700 relative overflow-hidden">
+      <section id="consultoria" className="bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 shadow-sm hover:shadow-xl transition-all group border-b-4 border-b-transparent hover:border-b-red-700 relative overflow-hidden scroll-mt-24">
         <div className="absolute top-0 right-0 p-12 text-gray-50 -z-0 rotate-12 transition-transform group-hover:rotate-0 group-hover:scale-110 duration-700 opacity-20">
           <Target size={240} />
         </div>
@@ -792,7 +823,7 @@ function ServiciosDetallePage({ onContactRequest }: { onContactRequest: (m: stri
         </div>
       </section>
 
-      <section className="bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 shadow-sm hover:shadow-xl transition-all group border-b-4 border-b-transparent hover:border-b-red-700 flex flex-col lg:flex-row gap-12 items-center relative overflow-hidden">
+      <section id="on-premise" className="bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 shadow-sm hover:shadow-xl transition-all group border-b-4 border-b-transparent hover:border-b-red-700 flex flex-col lg:flex-row gap-12 items-center relative overflow-hidden scroll-mt-24">
         <div className="absolute -right-20 -bottom-20 opacity-5 group-hover:scale-110 transition-transform duration-1000">
            <Server size={400} />
         </div>
@@ -828,7 +859,7 @@ function ServiciosDetallePage({ onContactRequest }: { onContactRequest: (m: stri
         </div>
       </section>
 
-      <section className="bg-gray-50 rounded-[4rem] p-10 md:p-16 border border-gray-100 relative overflow-hidden group/main">
+      <section id="legal" className="bg-gray-50 rounded-[4rem] p-10 md:p-16 border border-gray-100 relative overflow-hidden group/main scroll-mt-24">
         <div className="absolute -bottom-10 -left-10 p-12 text-gray-200/50 -z-0 group-hover/main:scale-110 group-hover/main:rotate-6 transition-transform duration-1000">
           <Scale size={320} />
         </div>
@@ -881,7 +912,7 @@ function ServiciosDetallePage({ onContactRequest }: { onContactRequest: (m: stri
         </div>
       </section>
 
-      <section className="bg-red-700 rounded-[3.5rem] p-12 md:p-20 text-center text-white space-y-8 shadow-2xl shadow-red-100 relative overflow-hidden group">
+      <section className="bg-red-700 rounded-[3.5rem] p-12 md:p-20 text-center text-white space-y-8 shadow-2xl shadow-red-100 relative overflow-hidden group scroll-mt-24">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent opacity-50 group-hover:scale-110 transition-transform duration-1000"></div>
         <h3 className="text-4xl md:text-5xl font-black uppercase tracking-tighter relative z-10">Construyamos el futuro de tu organización</h3>
         <p className="text-red-100 max-w-xl mx-auto font-medium text-lg relative z-10">Agendemos una sesión estratégica para evaluar tus necesidades técnicas, operativas y legales.</p>
@@ -897,8 +928,7 @@ function ServiciosDetallePage({ onContactRequest }: { onContactRequest: (m: stri
   );
 }
 
-// --- OTROS COMPONENTES: TALLERES, BOOTCAMP, MINICAMP ---
-function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => void, onContactRequest: (m: string) => void }) {
+function TalleresPage({ setView, onContactRequest }: { setView: (v: View, s?: string) => void, onContactRequest: (m: string) => void }) {
   const [activeModule, setActiveModule] = useState<number | null>(null);
   const [emailsPerWeek, setEmailsPerWeek] = useState(20);
   const [docsPerMonth, setDocsPerMonth] = useState(10);
@@ -911,7 +941,7 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
     { id: 4, time: "11:30 - 12:45", title: "Módulo 2: Empleado Admin Digital", desc: "Uso de IA para tareas administrativas pesadas: análisis de contratos, facturas y redacción delicada.", obj: "Análisis documental veloz.", prac: "Análisis de PDFs reales.", tools: ["Gemini 1.5 Pro", "Data Analysis"], cat: "Operaciones" },
     { id: 5, time: "12:45 - 13:30", title: "Módulo 3: IA Cognitiva y Agéntica", desc: "De la automatización ciega a la IA que razona. Agentes que planifican y ejecutan tareas complejas.", obj: "Agentes autónomos básicos.", prac: "Flujo agéntico de investigación.", tools: ["Agentes GPT", "Copilot Studio"], cat: "Cognitiva" },
     { id: 6, time: "13:30 - 14:00", title: "Módulo 4: Compliance Táctico", desc: "Módulo CRÍTICO. Cómo usar IA sin violar RGPD, propiedad intelectual o secretos comerciales.", obj: "Seguridad jurídica total.", prac: "Anonimización de datos (PII).", tools: ["Protocolos de Seguridad"], cat: "Legal" },
-    { id: 7, time: "14:00 - 15:30", title: "Comida", desc: "Recarga de energía y networking.", obj: "Networking.", prac: "N/A", tools: [], cat: "Break" },
+    { id: 7, time: "14:00 - 15:30", title: "Comida", desc: "Networking de energía y networking.", obj: "Networking.", prac: "N/A", tools: [], cat: "Break" },
     { id: 8, time: "15:30 - 17:00", title: "Módulo 5: Asistentes Personalizados", desc: "La Joya de la Corona. Crear un 'Clon Digital' entrenado con los datos de tu empresa.", obj: "GPT experto en tu negocio.", prac: "Entrenamiento con PDFs propios.", tools: ["Custom GPTs", "Knowledge"], cat: "Avanzado" },
     { id: 9, time: "17:00 - 17:30", title: "Cierre y Ciberseguridad", desc: "Hoja de ruta para el lunes siguiente y briefing final sobre riesgos (Phishing con IA, Deepfakes).", obj: "Plan de acción seguro.", prac: "Hoja de ruta personalizada.", tools: ["Plan de Acción"], cat: "Estrategia" }
   ];
@@ -943,7 +973,7 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
   const securityPercentage = Math.round((Object.values(checks).filter(Boolean).length / 4) * 100);
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0 space-y-20">
+    <div id="talleres-top" className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0 space-y-20 scroll-mt-24">
       <section className="text-left space-y-6">
         <div className="flex items-center gap-4 text-red-700">
           <Zap size={24} fill="currentColor" />
@@ -958,7 +988,7 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </p>
       </section>
 
-      <section className="bg-white border border-gray-100 rounded-[3rem] shadow-sm overflow-hidden">
+      <section className="bg-white border border-gray-100 rounded-[3rem] shadow-sm overflow-hidden scroll-mt-24">
         <div className="p-8 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
           <div>
             <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Cronograma de la Jornada</h3>
@@ -1086,7 +1116,7 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      <section className="bg-white border border-gray-100 rounded-[4rem] p-10 md:p-16 text-gray-900 relative overflow-hidden shadow-sm">
+      <section className="bg-white border border-gray-100 rounded-[4rem] p-10 md:p-16 text-gray-900 relative overflow-hidden shadow-sm scroll-mt-24">
         <div className="absolute top-0 right-0 p-12 text-gray-50 rotate-12 -z-0">
           <ShieldCheck size={180} />
         </div>
@@ -1147,7 +1177,7 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
             { icon: <FileText />, title: "3. Datos", desc: "Archivos PDF reales de su empresa (catálogos, normativas) para los ejercicios." }
           ].map((r, i) => (
             <div key={i} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-4">
-              <div className="text-red-700">{React.cloneElement(r.icon, { size: 24 })}</div>
+              <div className="text-red-700">{React.cloneElement(r.icon as React.ReactElement<{ size?: number }>, { size: 24 })}</div>
               <h5 className="font-black text-gray-900 uppercase tracking-tight">{r.title}</h5>
               <p className="text-base text-gray-500 font-medium leading-relaxed">{r.desc}</p>
             </div>
@@ -1155,7 +1185,7 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      <section className="bg-red-700 rounded-[3rem] p-12 text-center text-white space-y-6 shadow-2xl shadow-red-100">
+      <section className="bg-red-700 rounded-[3rem] p-12 text-center text-white space-y-6 shadow-2xl shadow-red-100 relative z-10">
         <h3 className="text-3xl font-black uppercase tracking-tighter">¿Listo para transformar tu organización?</h3>
         <p className="text-red-100 max-w-xl mx-auto font-medium">Ofrecemos modalidades de precio cerrado o planes personalizados adaptados a las necesidades de tu Pyme.</p>
         <button 
@@ -1170,13 +1200,13 @@ function TalleresPage({ setView, onContactRequest }: { setView: (v: View) => voi
   );
 }
 
-function BootcampPage({ setView, onContactRequest }: { setView: (v: View) => void, onContactRequest: (m: string) => void }) {
+function BootcampPage({ setView, onContactRequest }: { setView: (v: View, s?: string) => void, onContactRequest: (m: string) => void }) {
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0">
+    <div id="bootcamp-top" className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0 scroll-mt-24">
       <header className="mb-20 space-y-6">
         <div className="flex items-center gap-4 text-red-700">
           <Zap size={24} fill="currentColor" />
-          <span className="text-[10px] font-black uppercase tracking-0.4em">Programa Formativo Oficial</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.4em]">Programa Formativo Oficial</span>
         </div>
         <h1 className="text-5xl md:text-7xl font-black text-gray-900 tracking-tighter leading-none">
           BootCamp <span className="text-red-700">IA</span>
@@ -1203,8 +1233,8 @@ function BootcampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </header>
 
-      <section className="mb-24">
-        <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-0.3em mb-12 flex items-center gap-4">
+      <section className="mb-24 scroll-mt-24">
+        <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.3em] mb-12 flex items-center gap-4">
           <span className="w-12 h-px bg-gray-200"></span> Estructura y Contenido de las Sesiones
         </h2>
         
@@ -1254,12 +1284,12 @@ function BootcampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      <section className="mb-24 bg-white border border-gray-100 rounded-[3.5rem] p-10 md:p-16 relative overflow-hidden shadow-sm">
+      <section className="mb-24 bg-white border border-gray-100 rounded-[3.5rem] p-10 md:p-16 relative overflow-hidden shadow-sm scroll-mt-24">
         <div className="absolute top-0 right-0 p-12 text-gray-50 rotate-12 -z-0">
           <Terminal size={120} />
         </div>
         <div className="relative z-10">
-          <h2 className="text-[11px] font-black text-red-700 uppercase tracking-0.3em mb-12">Ecosistema de Herramientas de {highlightIA("IA")}</h2>
+          <h2 className="text-[11px] font-black text-red-700 uppercase tracking-[0.3em] mb-12">Ecosistema de Herramientas de {highlightIA("IA")}</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
             {[
               { cat: "Generación", tools: "ChatGPT, Copilot", icon: <PenTool size={20}/> },
@@ -1279,23 +1309,22 @@ function BootcampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      <section className="bg-red-700 rounded-[3rem] p-12 text-center text-white space-y-6 shadow-2xl shadow-red-100">
+      <section className="bg-red-700 rounded-[3rem] p-12 text-center text-white space-y-6 shadow-2xl shadow-red-100 relative z-10">
         <h3 className="text-3xl font-black uppercase tracking-tighter">¿Listo para transformar tu forma de trabajar?</h3>
         <p className="text-red-100 max-w-xl mx-auto font-medium">Ofrecemos modalidades de precio cerrado o planes personalizados adaptados a las necesidades de tu organización.</p>
         <button 
           onClick={() => onContactRequest("Hola, estoy interesado en recibir información detallada sobre el BootCamp IA de Tligent.")}
-          className="bg-white text-red-700 px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-0.25em hover:bg-gray-900 hover:text-white transition-all shadow-xl inline-flex items-center gap-4 active:scale-95 group"
+          className="bg-white text-red-700 px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-[0.25em] hover:bg-gray-900 hover:text-white transition-all shadow-xl inline-flex items-center gap-4 active:scale-95 group"
         >
           SOLICITAR INFORMACIÓN 
           <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
         </button>
       </section>
-
     </div>
   );
 }
 
-function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => void, onContactRequest: (m: string) => void }) {
+function MiniCampPage({ setView, onContactRequest }: { setView: (v: View, s?: string) => void, onContactRequest: (m: string) => void }) {
   const adaptacionData = [
     { name: 'Contenido Alumnos', value: 40 },
     { name: 'Contenido Base', value: 60 },
@@ -1310,7 +1339,7 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
   ];
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0 space-y-20 font-sans">
+    <div id="minicamp-top" className="animate-in fade-in slide-in-from-bottom-4 duration-700 w-full max-w-5xl mx-auto py-12 px-4 md:px-0 space-y-20 font-sans scroll-mt-24">
       <header className="text-left space-y-6">
         <div className="flex items-center gap-4 text-red-700">
           <Presentation size={24} />
@@ -1324,7 +1353,7 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </p>
       </header>
 
-      <section className="bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 shadow-sm overflow-hidden relative">
+      <section id="personalizada" className="bg-white border border-gray-100 rounded-[3rem] p-10 md:p-16 shadow-sm overflow-hidden relative scroll-mt-24">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <div className="space-y-4">
@@ -1365,7 +1394,7 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      <section className="space-y-12">
+      <section className="space-y-12 scroll-mt-24">
         <h2 className="text-3xl font-black text-gray-900 text-center uppercase tracking-tighter">El Cambio de Paradigma: Buscar vs. Generar</h2>
         <div className="grid md:grid-cols-2 gap-8">
           <div className="bg-white border border-gray-100 p-10 rounded-[3rem] shadow-sm space-y-6 group hover:border-gray-200 transition-all">
@@ -1407,7 +1436,7 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      <section className="bg-gray-50 rounded-[4rem] p-10 md:p-16 relative overflow-hidden">
+      <section className="bg-gray-50 rounded-[4rem] p-10 md:p-16 relative overflow-hidden scroll-mt-24">
         <div className="absolute top-0 right-0 p-12 text-gray-100 rotate-12 -z-0">
           <Layers size={180} />
         </div>
@@ -1446,7 +1475,7 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      <section className="grid md:grid-cols-2 gap-8">
+      <section className="grid md:grid-cols-2 gap-8 scroll-mt-24">
           <div className="bg-white border border-gray-100 p-10 rounded-[3rem] shadow-sm space-y-6">
             <div className="flex items-center gap-4 text-red-700">
                <PenTool size={32} />
@@ -1486,7 +1515,7 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
           </div>
       </section>
 
-      <section className="bg-white border border-gray-100 rounded-[4rem] p-10 md:p-16 text-gray-900 relative overflow-hidden shadow-sm">
+      <section id="notebook" className="bg-white border border-gray-100 rounded-[4rem] p-10 md:p-16 text-gray-900 relative overflow-hidden shadow-sm scroll-mt-24">
         <div className="absolute top-0 right-0 p-12 text-gray-50 rotate-12 -z-0">
           <BookOpen size={180} />
         </div>
@@ -1512,7 +1541,7 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
         </div>
       </section>
 
-      <section className="grid lg:grid-cols-2 gap-8">
+      <section className="grid lg:grid-cols-2 gap-8 scroll-mt-24">
           <div className="bg-white border border-gray-100 p-10 rounded-[3rem] shadow-sm space-y-6">
             <div className="flex items-center gap-4 text-red-700">
                <BrainCircuit size={32} />
@@ -1556,13 +1585,12 @@ function MiniCampPage({ setView, onContactRequest }: { setView: (v: View) => voi
           </div>
       </section>
 
-      <section className="bg-red-700 rounded-[3rem] p-12 text-center text-white space-y-6 shadow-2xl shadow-red-100">
+      <section className="bg-red-700 rounded-[3rem] p-12 text-center text-white space-y-6 shadow-2xl shadow-red-100 relative z-10">
         <h3 className="text-3xl font-black uppercase tracking-tighter">¿A qué estás esperando?</h3>
         <p className="text-red-100 max-w-xl mx-auto font-medium">Sesiones dinámicas, directas y adaptadas para que nadie se quede atrás en la revolución tecnológica.</p>
         <button 
-          // Fix: Corrected variable name from onContactNavigation to onContactRequest
           onClick={() => onContactRequest("Hola, me gustaría recibir más información sobre el programa MiniCamp IA.")}
-          className="bg-white text-red-700 px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-0.25em hover:bg-gray-900 hover:text-white transition-all shadow-xl inline-flex items-center gap-4 active:scale-95 group"
+          className="bg-white text-red-700 px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-[0.25em] hover:bg-gray-900 hover:text-white transition-all shadow-xl inline-flex items-center gap-4 active:scale-95 group"
         >
           SOLICITAR INFORMACIÓN 
           <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
